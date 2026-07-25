@@ -37,22 +37,39 @@ add_project_arguments(
 
 # Build options
 
-if get_option('dist') == 'unset'
-  error('-Ddist is required. Choose one of: arch, debian, fedora')
-endif
-dist = get_option('dist')
-
 if get_option('debug_logging')
   add_project_arguments('-DATRIUM_DEBUG', language: 'c')
 endif
 
-# Greeter install path: most distros follow the FHS convention /usr/libexec/,
-# but Arch keeps internal helpers under lib/<pkg>/.
+# Dist-specific paths.
+# Arch keeps greeters under lib/<pkg>/
+# NixOS requires all paths to be prefix-relative for the Nix store.
+dist = get_option('dist') 
 if dist == 'arch'
   greeter_install_dir = get_option('prefix') / 'lib' / 'atrium'
-else
+  _systemd_unitdir    = '/usr/lib/systemd/system'
+  _pamdir             = '/etc/pam.d'
+  _confdir            = '/etc'
+  _sysusersdir        = '/usr/lib/sysusers.d'
+  _tmpfilesdir        = '/usr/lib/tmpfiles.d'
+elif dist == 'fedora' or dist == 'debian'
   greeter_install_dir = get_option('prefix') / get_option('libexecdir')
+  _systemd_unitdir    = '/usr/lib/systemd/system'
+  _pamdir             = '/etc/pam.d'
+  _confdir            = '/etc'
+  _sysusersdir        = '/usr/lib/sysusers.d'
+  _tmpfilesdir        = '/usr/lib/tmpfiles.d'
+elif dist == 'nixos'
+  greeter_install_dir = get_option('prefix') / get_option('libexecdir')
+  _systemd_unitdir    = get_option('prefix') / 'lib' / 'systemd' / 'system'
+  _pamdir             = get_option('sysconfdir') / 'pam.d'
+  _confdir            = get_option('sysconfdir')
+  _sysusersdir        = get_option('prefix') / 'lib' / 'sysusers.d'
+  _tmpfilesdir        = get_option('prefix') / 'lib' / 'tmpfiles.d'
+else
+  error('-Ddist is required. Choose one of: arch, debian, fedora, nixos')
 endif
+
 add_project_arguments('-DATRIUM_GREETER_PATH="' + greeter_install_dir / 'atrium-gtk-greeter' + '"', language: 'c')
 
 daemon_bin = get_option('prefix') / 'bin' / 'atrium'
@@ -306,14 +323,14 @@ configure_file(
   output:        'atrium.service',
   configuration: {'daemon_bin': daemon_bin},
   install:       true,
-  install_dir:   '/usr/lib/systemd/system',
+  install_dir:   _systemd_unitdir,
   install_tag:   'daemon',
 )
 
 install_data(
   'data/pam.d/atrium.' + dist,
   rename: 'atrium',
-  install_dir: '/etc/pam.d',
+  install_dir: _pamdir,
   install_tag: 'daemon',
 )
 
@@ -322,12 +339,12 @@ configure_file(
   output: 'atrium.conf',
   configuration: {'greeter_dir': greeter_install_dir},
   install: true,
-  install_dir: '/etc',
+  install_dir: _confdir,
 )
 
 install_data(
   'data/atrium-greeter.conf',
-  install_dir: '/etc',
+  install_dir: _confdir,
   install_tag: 'greeter',
 )
 
@@ -350,20 +367,24 @@ install_data(
 # the package manager on supported distros.
 install_data(
   'data/sysusers.d/atrium.conf',
-  install_dir: '/usr/lib/sysusers.d',
+  install_dir: _sysusersdir,
   install_tag: 'daemon',
 )
 install_data(
   'data/tmpfiles.d/atrium.conf',
-  install_dir: '/usr/lib/tmpfiles.d',
+  install_dir: _tmpfilesdir,
   install_tag: 'daemon',
 )
 
 # For source installs, create the atriumdm user and home directory directly.
-meson.add_install_script('systemd-sysusers', '/usr/lib/sysusers.d/atrium.conf',
-  skip_if_destdir: true)
-meson.add_install_script('systemd-tmpfiles', '--create', '/usr/lib/tmpfiles.d/atrium.conf',
-  skip_if_destdir: true)
+# Skipped on NixOS — the NixOS module handles user/group and tmpfiles
+# declaratively.
+if dist != 'nixos'
+  meson.add_install_script('systemd-sysusers', _sysusersdir / 'atrium.conf',
+    skip_if_destdir: true)
+  meson.add_install_script('systemd-tmpfiles', '--create', _tmpfilesdir / 'atrium.conf',
+    skip_if_destdir: true)
+endif
 
 # SELinux setup (Fedora only). Must run after the tmpfiles script above so
 # /var/lib/atrium exists when the setup script relabels it.
