@@ -327,13 +327,6 @@ configure_file(
   install_tag:   'daemon',
 )
 
-install_data(
-  'data/pam.d/atrium.' + dist,
-  rename: 'atrium',
-  install_dir: _pamdir,
-  install_tag: 'daemon',
-)
-
 configure_file(
   input: 'data/atrium.conf.in',
   output: 'atrium.conf',
@@ -377,13 +370,17 @@ install_data(
 )
 
 # For source installs, create the atriumdm user and home directory directly.
-# Skipped on NixOS — the NixOS module handles user/group and tmpfiles
-# declaratively.
+# Skipped on NixOS, the module handles user/group, tmpfiles and PAM stack declaratively.
 if dist != 'nixos'
   meson.add_install_script('systemd-sysusers', _sysusersdir / 'atrium.conf',
     skip_if_destdir: true)
   meson.add_install_script('systemd-tmpfiles', '--create', _tmpfilesdir / 'atrium.conf',
     skip_if_destdir: true)
+  install_data('data/pam.d/atrium.' + dist,
+    rename: 'atrium',
+    install_dir: _pamdir,
+    install_tag: 'daemon',
+  )
 endif
 
 # SELinux setup (Fedora only). Must run after the tmpfiles script above so
