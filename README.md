@@ -163,7 +163,7 @@ SELinux contexts and policy module.)
 ### 2. Build and install
 
 ```sh
-meson setup build -Ddist=<your-distro>   # arch, debian, fedora
+meson setup build -Ddist=<your-distro>   # arch, debian, fedora, nixos
 ninja -C build
 sudo ninja -C build install
 ```
