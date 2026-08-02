@@ -18,7 +18,7 @@
       gtk4
     ];
 
-    mesonFlags = [ "-Ddist=nixos" ];
+    mesonFlags = [ "-Ddist=nixos" "-Ddebug_logging=true" ];
 
     meta = with pkgs.lib; {
       description = "Wayland multiseat display manager";
