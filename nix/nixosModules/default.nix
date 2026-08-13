@@ -6,6 +6,7 @@
 }:
 let
   inherit (lib)
+    mkDefault
     mkIf
     mkEnableOption
     mkOption
@@ -52,6 +53,9 @@ in
   config = mkIf cfg.enable {
     environment.systemPackages = [ pkg ];
 
+    # Required for XDG_DATA_DIRS to correctly set
+    services.displayManager.enable = mkDefault true;
+
     users.users.atriumdm = {
       isSystemUser = true;
       description = "Atrium greeter user";
@@ -92,6 +96,10 @@ in
       before = [ "getty@tty1.service" ];
       wantedBy = [ "graphical.target" ];
       aliases = [ "display-manager.service" ];
+      environment = {
+        # The daemon is a system service, so XDG_DATA_DIRS has to be set manually
+        XDG_DATA_DIRS = mkDefault "${config.services.displayManager.sessionData.desktops}/share";
+      };
       serviceConfig = {
         Type = "simple";
         ExecStart = "${lib.getExe pkg}";
