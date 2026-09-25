@@ -345,8 +345,11 @@ _Noreturn void session_runner(const char *pam_conf_path, const seat *s) {
         username and chosen_session (also in cred_buf) must remain intact. */
         explicit_bzero((char *)password, strlen(password));
         if (auth_r != PAM_SUCCESS) {
-            log_warn("session_runner: auth failed for '%s' on seat '%s'", username, s->name);
-            ipc_send_str(parent_end, "fail:authentication failed\n");
+            char reply[MAX_LEN_IPC_MSG];
+            snprintf(reply, sizeof(reply), "fail:%s\n", auth_fail_message(auth_r));
+            log_warn("session_runner: auth failed for '%s' on seat '%s': %s", username, s->name,
+                     pam_strerror(NULL, auth_r));
+            ipc_send_str(parent_end, reply);
             goto retry;
         }
 

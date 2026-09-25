@@ -24,6 +24,7 @@
 int main(int argc, char *argv[]) {
     if (argc < 2 || argc > 3) {
         fprintf(stderr, "Usage: %s <username> [pam_conf_path]\n", argv[0]);
+        fprintf(stderr, "Opens a real logind session on seat1; press Enter to close it.\n");
         return 1;
     }
 
@@ -60,7 +61,8 @@ int main(int argc, char *argv[]) {
     int r =
         auth_authenticate(username, password, (const char **)env, pam_conf_path, "atrium", &result);
     if (r != PAM_SUCCESS) {
-        fprintf(stderr, "auth_authenticate failed: %d\n", r);
+        fprintf(stderr, "auth_authenticate failed: %d (%s) -> greeter shows: \"%s\"\n", r,
+                pam_strerror(NULL, r), auth_fail_message(r));
         return 1;
     }
 

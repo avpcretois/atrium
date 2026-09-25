@@ -27,6 +27,9 @@ Returns PAM_SUCCESS (0) on success, or a nonzero error code on failure. */
 int auth_authenticate(const char *username, const char *password, const char **env,
                       const char *pam_conf_path, const char *service_name, auth_result *result);
 
+/* Map PAM status returned by auth_authenticate() to a user-readable message. */
+const char *auth_fail_message(int pam_status);
+
 /* Phase 2: Open the user session. Populates result->env on success. The caller
 must call auth_close_session when the session ends. On failure, the PAM handle
 is cleaned up internally; do not call auth_close_session.

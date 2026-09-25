@@ -84,8 +84,7 @@ int auth_authenticate(const char *username, const char *password, const char **e
 #ifdef HAVE_PAM_START_CONFDIR
     /* pam_start_confdir() is equivalent to pam_start() but allows setting a
     configuration directory other than /etc/pam.d - useful for testing. */
-    log_info("starting PAM auth with config path %s",
-             pam_conf_path ? pam_conf_path : "(default)");
+    log_info("starting PAM auth with config path %s", pam_conf_path ? pam_conf_path : "(default)");
     int r = pam_start_confdir(service_name, username, &conv, pam_conf_path, &pamh);
 #else
     if (pam_conf_path)
@@ -120,6 +119,34 @@ int auth_authenticate(const char *username, const char *password, const char **e
     result->pam_handle = pamh;
     result->env = NULL;
     return PAM_SUCCESS;
+}
+
+const char *auth_fail_message(int pam_status) {
+    switch (pam_status) {
+        case PAM_NEW_AUTHTOK_REQD:
+        case PAM_AUTHTOK_EXPIRED:
+            return "password expired";
+        case PAM_ACCT_EXPIRED:
+            return "account expired";
+        case PAM_PERM_DENIED:
+            /* Policy modules (pam_time, pam_access) in either PAM phase. */
+            return "access denied";
+        case PAM_MAXTRIES:
+            return "too many failed attempts";
+        case PAM_AUTHINFO_UNAVAIL:
+            /* Typically a network failure reaching LDAP/SSSD/Kerberos. */
+            return "auth service unavailable";
+        case PAM_ABORT:
+        case PAM_BUF_ERR:
+        case PAM_CRED_INSUFFICIENT:
+        case PAM_SERVICE_ERR:
+        case PAM_SYSTEM_ERR:
+            return "system error";
+        case PAM_USER_UNKNOWN:
+            /* fallthrough deliberate. */
+        default:
+            return "authentication failed";
+    }
 }
 
 int auth_open_session(auth_result *result) {
