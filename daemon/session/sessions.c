@@ -153,12 +153,12 @@ void sessions_free(void) {
 
 int sessions_scan(void) {
     sessions_free();
-    xdg_dir_vec xdg_dirs = xdg_env_get_sessions();
+    char **xdg_dirs = xdg_env_get_session_dirs();
 
-    for (size_t d = 0; d < xdg_dirs.len; d++) {
-        DIR *dir = opendir(xdg_dirs.dirs[d]);
+    for (size_t d = 0; xdg_dirs[d] != NULL; d++) {
+        DIR *dir = opendir(xdg_dirs[d]);
         if (!dir) {
-            log_debug("sessions: %s: %s", xdg_dirs.dirs[d], strerror(errno));
+            log_debug("sessions: %s: %s", xdg_dirs[d], strerror(errno));
             continue;
         }
 
@@ -185,12 +185,12 @@ int sessions_scan(void) {
 
             /* Earlier directory wins: skip duplicates from later dirs. */
             if (sessions_find(id)) {
-                log_debug("sessions: skip duplicate '%s' from %s", id, xdg_dirs.dirs[d]);
+                log_debug("sessions: skip duplicate '%s' from %s", id, xdg_dirs[d]);
                 continue;
             }
 
             char path[512];
-            snprintf(path, sizeof(path), "%s/%s", xdg_dirs.dirs[d], name);
+            snprintf(path, sizeof(path), "%s/%s", xdg_dirs[d], name);
 
             session_entry entry;
             if (parse_desktop_file(path, id, &entry) == 0) {
@@ -202,7 +202,7 @@ int sessions_scan(void) {
 
         closedir(dir);
     }
-    xdg_env_free_sessions();
+    xdg_env_free_session_dirs(xdg_dirs);
 
     if (g_session_count == 0)
         log_warn("sessions: no Wayland sessions found");

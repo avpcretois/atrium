@@ -1,17 +1,13 @@
 #pragma once
 
-#include <stddef.h>
-
-typedef struct {
-    char **dirs;
-    size_t len;
-} xdg_dir_vec;
-
-/**
- * Parse the XDG_DATA_DIR environment variable and appends to each entry '/wayland-sessions'
- * Returns A NULL terminated array of strings or NULL if the memory allocation failed.
+/*
+ * xdg_env.h - locate Wayland session directories via $XDG_DATA_DIRS
  */
-xdg_dir_vec xdg_env_get_sessions(void);
 
-/* Helper function to free all allocated memory from xdg_env_get_sessions */
-void xdg_env_free_sessions(void);
+/* Collect the 'wayland-sessions' subdirectory of each colon separated
+$XDG_DATA_DIRS entry, plus the /usr/local/share and /usr/share fallbacks.
+Entries without one are skipped. */
+char **xdg_env_get_session_dirs(void);
+
+/* Free an array returned by xdg_env_get_session_dirs(); `dirs` is left dangling. */
+void xdg_env_free_session_dirs(char **dirs);
